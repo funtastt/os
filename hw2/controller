@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import random
+import signal
+
+processed_lines = 0
+
+def sigusr1_handler(signum, frame):
+    global processed_lines
+    message = f"Processed {processed_lines} lines\n"
+    os.write(sys.stderr.fileno(), message.encode())
+
+def main():
+    global processed_lines
+    # Create pipes
+    pipe_a_r, pipe_a_w = os.pipe()
+    pipe_b_r, pipe_b_w = os.pipe()
+    pipe_c_r, pipe_c_w = os.pipe()
+
+    # Fork P1
+    pid1 = os.fork()
+    if pid1 == 0:
+        # Child P1
+        os.dup2(pipe_a_w, sys.stdout.fileno())
+        os.close(pipe_a_r)
+        os.close(pipe_a_w)
+        os.close(pipe_b_r)
+        os.close(pipe_b_w)
+        os.close(pipe_c_r)
+        os.close(pipe_c_w)
+        N = random.randint(120, 180)
+        generator_path = os.path.join(os.getcwd(), 'generator')
+        os.execve(generator_path, [generator_path, str(N)], os.environ)
+    # Fork P2
+    pid2 = os.fork()
+    if pid2 == 0:
+        # Child P2
+        os.dup2(pipe_b_r, sys.stdin.fileno())
+        os.dup2(pipe_c_w, sys.stdout.fileno())
+        os.close(pipe_a_r)
+        os.close(pipe_a_w)
+        os.close(pipe_b_r)
+        os.close(pipe_b_w)
+        os.close(pipe_c_r)
+        os.close(pipe_c_w)
+        bc_path = '/usr/bin/bc'
+        os.execve(bc_path, [bc_path], os.environ)
+    # Parent process
+    os.close(pipe_a_w)
+    os.close(pipe_b_r)
+    os.close(pipe_c_w)
+
+    # Set up signal handler
+    signal.signal(signal.SIGUSR1, sigusr1_handler)
+
+    buffer_a = b''
+    buffer_c = b''
+
+    while True:
+        # Read from Pipe A
+        try:
+            data_a = os.read(pipe_a_r, 1024)
+            if not data_a:
+                break
+            buffer_a += data_a
+            while b'\n' in buffer_a:
+                line, buffer_a = buffer_a.split(b'\n', 1)
+                expression = line.decode()
+                # Write to Pipe B
+                os.write(pipe_b_w, (expression + '\n').encode())
+                # Read from Pipe C
+                while True:
+                    data_c = os.read(pipe_c_r, 1024)
+                    if not data_c:
+                        break
+                    buffer_c += data_c
+                    if b'\n' in buffer_c:
+                        result, buffer_c = buffer_c.split(b'\n', 1)
+                        result_str = result.decode()
+                        # Write to stdout
+                        output = f"{expression} = {result_str}\n"
+                        os.write(sys.stdout.fileno(), output.encode())
+                        processed_lines += 1
+                        break
+        except InterruptedError:
+            continue
+
+    # Close write end of Pipe B to signal bc
+    os.close(pipe_b_w)
+    os.close(pipe_a_r)
+    os.close(pipe_c_r)
+
+    # Wait for child processes
+    os.waitpid(pid1, 0)
+    os.waitpid(pid2, 0)
+
+    os._exit(0)
+
+if __name__ == "__main__":
+    main()

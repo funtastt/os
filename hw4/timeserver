@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+# timeserver
+
+import socket
+import sys
+from datetime import datetime
+
+def main():
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <port>")
+        sys.exit(1)
+
+    port = int(sys.argv[1])
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
+        server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_sock.bind(('0.0.0.0', port))
+        server_sock.listen()
+
+        while True:
+            try:
+                client_sock, addr = server_sock.accept()
+                with client_sock:
+                    now = datetime.now().strftime("%d.%m.%Y %H:%M")
+                    client_sock.sendall(now.encode())
+            except KeyboardInterrupt:
+                break
+            except:
+                continue
+
+if __name__ == "__main__":
+    main()

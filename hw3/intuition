@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# Initialize variables
+step=1
+hits=0
+misses=0
+declare -a numbers
+declare -a results
+
+while true; do
+    # Generate random number between 0 and 9
+    rand_num=$(( RANDOM % 10 ))
+
+    # Display step and prompt
+    echo "Step: $step"
+    while true; do
+        read -p "Please enter number from 0 to 9 (q - quit): " user_input
+        if [[ "$user_input" =~ ^[0-9]$ || "$user_input" == "q" ]]; then
+            break
+        else
+            echo "Input error!"
+        fi
+    done
+
+    # Check if user wants to quit
+    if [[ "$user_input" == "q" ]]; then
+        exit 0
+    fi
+
+    # Compare numbers
+    if [[ "$user_input" -eq "$rand_num" ]]; then
+        echo -e "Hit! My number: $rand_num"
+        hits=$((hits + 1))
+        result="hit"
+    else
+        echo -e "Miss! My number: $rand_num"
+        misses=$((misses + 1))
+        result="miss"
+    fi
+
+    # Update numbers and results arrays
+    numbers+=("$rand_num")
+    results+=("$result")
+    if [[ ${#numbers[@]} -gt 10 ]]; then
+        numbers=("${numbers[@]:1}")
+        results=("${results[@]:1}")
+    fi
+
+    # Calculate percentages
+    total=$((hits + misses))
+    if [[ $total -gt 0 ]]; then
+        hit_percent=$(( hits * 100 / total ))
+        miss_percent=$(( misses * 100 / total ))
+    else
+        hit_percent=0
+        miss_percent=0
+    fi
+    echo "Hit: ${hit_percent}% Miss: ${miss_percent}%"
+
+    # Display last 10 numbers with colors
+    echo -n "Numbers:"
+    for i in "${!numbers[@]}"; do
+        num="${numbers[$i]}"
+        res="${results[$i]}"
+        if [[ "$res" == "hit" ]]; then
+            echo -n " \e[32m$num\e[0m"
+        else
+            echo -n " \e[31m$num\e[0m"
+        fi
+    done
+    echo -e "\n"
+
+    # Increment step
+    step=$((step + 1))
+done

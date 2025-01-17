@@ -1,30 +1,3 @@
-#!/usr/bin/env python3
+На числовой прямой даны отрезки: А = [5;17], B = [10;21], С = [12;30]. Укажите значение логического выражения для x = 30, x = 9, x = 4, если 1 означает истину, а 0 — ложь. В ответе запишите 3 числа без пробелов.
 
-import os
-import sys
-import random
-import time
-
-def main():
-    if len(sys.argv) < 2:
-        os._exit(1)
-    try:
-        N = int(sys.argv[1])
-        if not (120 <= N <= 180):
-            os._exit(1)
-    except:
-        os._exit(1)
-
-    operators = ['+', '-', '*', '/']
-    for _ in range(N):
-        X = random.randint(1,9)
-        Y = random.randint(1,9)
-        O = random.choice(operators)
-        expression = f"{X} {O} {Y}\n"
-        os.write(sys.stdout.fileno(), expression.encode())
-        time.sleep(1)
-
-    os._exit(0)
-
-if __name__ == "__main__":
-    main()
+¬(x∈B)∧¬(x∈A)∨(x∈C)
